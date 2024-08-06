@@ -1,0 +1,22 @@
+# Default base image
+ARG BASE_IMAGE=ubuntu:22.04
+
+# To alter the base image, pass in a different image name to the build command:
+#   docker build --build-arg BASE_IMAGE=ubuntu:20.04 .
+FROM ${BASE_IMAGE}
+
+# Install necessary dependencies
+
+###########################################################
+## Copy and install Qualcomm® Neural Processing SDK (SNPE)
+###########################################################
+WORKDIR /opt
+COPY downloads/snpe-2.25.0.240728.tar.gz .
+RUN mkdir -p /opt/snpe \
+    && tar -C /opt/snpe -xf /opt/snpe-2.25.0.240728.tar.gz \
+    && rm /opt/snpe-2.25.0.240728.tar.gz
+ENV SNPE_ROOT=/opt/snpe
+ENV PATH=$PATH:/opt/snpe/bin/x86_64-linux-clang/
+
+# Set the working directory
+WORKDIR /app

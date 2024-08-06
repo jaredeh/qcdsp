@@ -1,0 +1,57 @@
+# Default base image
+ARG BASE_IMAGE=ubuntu:22.04
+
+# To alter the base image, pass in a different image name to the build command:
+#   docker build --build-arg BASE_IMAGE=ubuntu:20.04 .
+FROM ${BASE_IMAGE}
+
+# Install necessary dependencies
+
+###########################################################
+## Copy and install Hexagon SDK
+###########################################################
+ARG HEXAGON_SDK_ROOT=/opt/hexagon_sdk
+
+WORKDIR /opt
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get remove -y \
+      openjdk-8-jdk \
+      openjdk-11-jdk \
+      default-jre \
+    && apt-get install -y \
+      unzip \
+      git \
+      openjdk-8-jdk \
+      libncurses5 \
+      lib32ncurses5-dev \
+      lib32z1 \
+      libffi7 \
+      make \
+      python2.7 \
+    && ln -s /usr/lib/x86_64-linux-gnu/libffi.so.7 /usr/lib/x86_64-linux-gnu/libffi.so.6 \
+    && ln -s /usr/bin/python2.7 /usr/bin/python \
+    && rm -rf /var/lib/apt/lists/*
+COPY downloads/hexagon_sdk_lnx_3_5_installer_00006_1.zip .
+RUN unzip hexagon_sdk_lnx_3_5_installer_00006_1.zip \
+    && rm hexagon_sdk_lnx_3_5_installer_00006_1.zip \
+    && tar xf Hexagon_SDK_LNX_3_5_Installer_00006_1.tar \
+    && rm Hexagon_SDK_LNX_3_5_Installer_00006_1.tar \
+    && chmod +x qualcomm_hexagon_sdk_3_5_4_eval.bin \
+    && ./qualcomm_hexagon_sdk_3_5_4_eval.bin -i silent | true \
+    && rm qualcomm_hexagon_sdk_3_5_4_eval.bin \
+    && mv /root/Qualcomm/Hexagon_SDK/3.5.4/ ${HEXAGON_SDK_ROOT}
+
+# Set environment variables for the Hexagon SDK
+#   See /opt/hexagon_sdk/setup_sdk_env.source for details
+ENV HEXAGON_SDK_ROOT=${HEXAGON_SDK_ROOT}
+ENV DEFAULT_HEXAGON_TOOLS_ROOT=${HEXAGON_SDK_ROOT}/tools/HEXAGON_Tools/8.3.07
+ENV HEXAGON_TOOLS_ROOT=${DEFAULT_HEXAGON_TOOLS_ROOT}
+ENV PATH=$PATH:${HEXAGON_TOOLS_ROOT}/Tools/bin:${HEXAGON_SDK_ROOT}/tools/qaic/Ubuntu18
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${HEXAGON_SDK_ROOT}/tools/libusb/
+# for the /opt/hexagon_sdk/setup_sdk_env.source
+ENV SDK_SETUP_ENV=Done
+
+
+# Set the working directory
+WORKDIR /app

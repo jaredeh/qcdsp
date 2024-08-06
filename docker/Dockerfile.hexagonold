@@ -1,0 +1,86 @@
+FROM ubuntu:20.04
+
+# Install necessary dependencies
+
+###########################################################
+## Copy and install Hexagon SDK
+###########################################################
+WORKDIR /opt
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get remove -y \
+      openjdk-8-jdk \
+      openjdk-11-jdk \
+      default-jre \
+    && apt-get install -y \
+      unzip \
+      git \
+      openjdk-8-jdk \
+      libncurses5 \
+      lib32ncurses5-dev \
+      lib32z1 \
+      libffi7 \
+      make \
+      python2.7 \
+    && ln -s /usr/lib/x86_64-linux-gnu/libffi.so.7 /usr/lib/x86_64-linux-gnu/libffi.so.6 \
+    && rm -rf /var/lib/apt/lists/*
+COPY downloads/hexagon_sdk_lnx_3_5_installer_00006_1.zip .
+RUN unzip hexagon_sdk_lnx_3_5_installer_00006_1.zip \
+    && rm hexagon_sdk_lnx_3_5_installer_00006_1.zip \
+    && tar xf Hexagon_SDK_LNX_3_5_Installer_00006_1.tar \
+    && rm Hexagon_SDK_LNX_3_5_Installer_00006_1.tar \
+    && chmod +x qualcomm_hexagon_sdk_3_5_4_eval.bin \
+    && ./qualcomm_hexagon_sdk_3_5_4_eval.bin -i silent | true \
+    && rm qualcomm_hexagon_sdk_3_5_4_eval.bin \
+    && mv /root/Qualcomm/Hexagon_SDK/3.5.4/ /opt/hexagon_sdk
+
+# Set environment variables for the Hexagon SDK
+#   See /opt/hexagon_sdk/setup_sdk_env.source for details
+ENV HEXAGON_SDK_ROOT=/opt/hexagon_sdk
+ENV PATH=$PATH:$HEXAGON_SDK_ROOT/tools/HEXAGON_Tools/8.3.07/Tools/bin:$HEXAGON_SDK_ROOT/tools/qaic/Ubuntu18
+ENV SDK_SETUP_ENV=Done
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HEXAGON_SDK_ROOT/tools/libusb/
+ENV DEFAULT_HEXAGON_TOOLS_ROOT=$HEXAGON_SDK_ROOT/tools/HEXAGON_Tools/8.3.07
+ENV HEXAGON_TOOLS_ROOT=$DEFAULT_HEXAGON_TOOLS_ROOT
+
+
+###########################################################
+## Copy the sdkmanager for Android stuff
+###########################################################
+WORKDIR /opt
+ARG DEBIAN_FRONTEND=noninteractive
+ARG ANDROID_SDK_ROOT=/opt/Android/Sdk
+RUN apt-get update \
+    && apt-get remove -y \
+      openjdk-11-jdk \
+      default-jre \
+    && apt-get autoremove -y \
+    && apt-get install -y \
+      unzip \
+      git \
+      openjdk-21-jdk \
+    && rm -rf /var/lib/apt/lists/*
+COPY downloads/commandlinetools-linux-11076708_latest.zip .
+RUN unzip commandlinetools-linux-11076708_latest.zip \
+    && rm commandlinetools-linux-11076708_latest.zip \
+    && mkdir -p ${ANDROID_SDK_ROOT} \
+    && yes | /opt/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_SDK_ROOT} --licenses \
+    && /opt/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_SDK_ROOT} \
+      "platform-tools" \
+      "build-tools;35.0.0" \
+      "ndk;27.0.12077973"
+
+# Set environment variables for the Android SDK
+ENV PATH=$PATH:/opt/cmdline-tools/bin
+ENV PATH=$PATH:/opt/Android/Sdk/platform-tools
+ENV ANDROID_HOME=/opt/Android/Sdk
+ENV ANDROID_ADB_SERVER_ADDRESS=host.docker.internal
+#ENV ANDROID_ROOT_DIR
+# Run docker container with --add-host=host.docker.internal:host-gateway
+# On host run the following to bind to all networks:
+#    adb kill-server
+#    adb -a -P 5037 start-server
+
+
+# Set the working directory
+WORKDIR /app

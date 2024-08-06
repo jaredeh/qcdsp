@@ -1,0 +1,39 @@
+# Default base image
+ARG BASE_IMAGE=ubuntu:22.04
+
+# To alter the base image, pass in a different image name to the build command:
+#   docker build --build-arg BASE_IMAGE=ubuntu:20.04 .
+FROM ${BASE_IMAGE}
+
+# Install necessary dependencies
+
+###########################################################
+## Prerequistes Qualcomm® Neural Processing SDK (SNPE)
+###########################################################
+WORKDIR /opt
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get remove -y \
+      openjdk-11-jdk \
+      default-jre \
+    && apt-get install -y \
+      python3.10 \
+      python3-distutils \
+      python3-pip \
+      libpython3.10 \
+      unzip \
+      git \
+      wget \
+      curl \
+      make \
+    && python3.10 -m pip install --upgrade pip \
+    && VIRTUAL_ENV=TRUE $SNPE_ROOT/bin/check-python-dependency \
+    && $SNPE_ROOT/bin/check-linux-dependency.sh \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for the Qualcomm® Neural Processing SDK (SNPE)
+#   See /opt/hexagon_sdk/setup_sdk_env.source for details
+
+
+# Set the working directory
+WORKDIR /app
